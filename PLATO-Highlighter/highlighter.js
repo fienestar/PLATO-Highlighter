@@ -34,8 +34,13 @@
       })).filter(video => video.title)
 
       let video_state_map_by_title = {}
-      for (let video_state of video_state_list)
-        video_state_map_by_title[video_state.title] = video_state
+      for (let video_state of video_state_list){
+        if(!video_state_map_by_title[video_state.title])
+          video_state_map_by_title[video_state.title] = []
+
+        video_state_map_by_title[video_state.title].push(video_state)
+      }
+        
 
       $(() => {
         Array.from($('img[alt=동영상]')).map(e => ({
@@ -43,7 +48,8 @@
           title: normalize_title(e.parentElement.children[1].innerText.split('\n')[0]),
           style: e.parentElement.style
         })).forEach(video => {
-          let state = video_state_map_by_title[video.title]
+          let state = (video_state_map_by_title[video.title] || []).shift()
+
           if (state && (state.presence == 'O' || state.presence == 'X')) {
 
             video.style['font-weight'] = 'bold'
