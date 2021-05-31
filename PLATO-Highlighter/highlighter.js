@@ -43,26 +43,52 @@
         
 
       $(() => {
-        Array.from($('img[alt=동영상]')).map(e => ({
+        let current_week = $('.course-box-current')
+        let old_id = null
+        let current_week_video_array = null
+
+        Array.from($('#course-all-sections').find('img[alt=동영상]')).map(e => ({
           element: e.parentElement,
           title: normalize_title(e.parentElement.children[1].innerText.split('\n')[0]),
-          style: e.parentElement.style
+          style: e.parentElement.style,
+          week_id: e.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.id
         })).forEach(video => {
+          if(old_id != video.week_id){
+            current_week_video_array = Array.from(current_week.find('#'+video.week_id).find('img[alt=동영상]')).map(e => ({
+              element: e.parentElement,
+              title: normalize_title(e.parentElement.children[1].innerText.split('\n')[0]),
+              style: e.parentElement.style,
+              week_id: e.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.id
+            }))
+
+            old_id = video.week_id
+          }
+
+          let obj_videos = [video]
+
+          if(current_week_video_array.length && current_week_video_array[0].title == video.title){
+            obj_videos.push(current_week_video_array[0])
+            current_week_video_array.shift()
+          }
+
+          
           let state = (video_state_map_by_title[video.title] || []).shift()
 
           if (state && (state.presence == 'O' || state.presence == 'X')) {
 
-            video.style['font-weight'] = 'bold'
+            obj_videos.forEach(video=>{
+              video.style['font-weight'] = 'bold'
 
-            if (state.presence == 'O')
-              video.style['color'] = 'green'
-            else
-              video.style['color'] = 'red'
+              if (state.presence == 'O')
+                video.style['color'] = 'green'
+              else
+                video.style['color'] = 'red'
 
-            if (video.element.className.includes('dimmed')) {
-              video.element.className = ''
-              video.element.children[0].style['opacity'] = '0.5'
-            }
+              if (video.element.className.includes('dimmed')) {
+                video.element.className = ''
+                video.element.children[0].style['opacity'] = '0.5'
+              }
+            })
           }
         })
       })
