@@ -34,13 +34,13 @@
       })).filter(video => video.title)
 
       let video_state_map_by_title = {}
-      for (let video_state of video_state_list){
-        if(!video_state_map_by_title[video_state.title])
+      for (let video_state of video_state_list) {
+        if (!video_state_map_by_title[video_state.title])
           video_state_map_by_title[video_state.title] = []
 
         video_state_map_by_title[video_state.title].push(video_state)
       }
-        
+
 
       $(() => {
         let current_week = $('.course-box-current')
@@ -53,8 +53,8 @@
           style: e.parentElement.style,
           week_id: e.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.id
         })).forEach(video => {
-          if(old_id != video.week_id){
-            current_week_video_array = Array.from(current_week.find('#'+video.week_id).find('img[alt=동영상]')).map(e => ({
+          if (old_id != video.week_id) {
+            current_week_video_array = Array.from(current_week.find('#' + video.week_id).find('img[alt=동영상]')).map(e => ({
               element: e.parentElement,
               title: normalize_title(e.parentElement.children[1].innerText.split('\n')[0]),
               style: e.parentElement.style,
@@ -66,27 +66,27 @@
 
           let obj_videos = [video]
 
-          if(current_week_video_array.length && current_week_video_array[0].title == video.title){
+          if (current_week_video_array.length && current_week_video_array[0].title == video.title) {
             obj_videos.push(current_week_video_array[0])
             current_week_video_array.shift()
           }
 
-          
+
           let state = (video_state_map_by_title[video.title] || []).shift()
 
           if (state && (state.presence == 'O' || state.presence == 'X')) {
 
-            obj_videos.forEach(video=>{
-              video.style['font-weight'] = 'bold'
+            obj_videos.forEach(video => {
+              video.style.fontWeight = 'bold'
 
               if (state.presence == 'O')
-                video.style['color'] = 'green'
+                video.style.color = colors['출석']
               else
-                video.style['color'] = 'red'
+                video.style.color = colors['결석']
 
-              if (video.element.className.includes('dimmed')) {
-                video.element.className = ''
-                video.element.children[0].style['opacity'] = '0.5'
+              if (video.element.classList.contains('dimmed_text')) {
+                video.element.classList.remove('dimmed_text')
+                video.element.children[0].style.opacity = '0.5'
               }
             })
           }
@@ -108,7 +108,7 @@
         let status_table = $(vdom).find('.submissionstatustable')[0]
         let is_submitted = (get_child(status_table, [1, 0, 0, 0, 1]).innerText == '제출 완료')
 
-        assignment.style['font-weight'] = 'bold'
+        assignment.style.fontWeight = 'bold'
 
         if (is_submitted)
           assignment.style['color'] = 'green'
