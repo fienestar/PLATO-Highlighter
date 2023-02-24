@@ -3,8 +3,12 @@
   const current_url = window.location.href
   const domain = current_url.split('/').slice(0, 3).join('/')
   const course_view_url_start = `${domain}/course/view.php?id=`
-  const check_view_state_url_start = `${domain}/report/ubcompletion/user_progress_a.php?id=`
+  const check_view_state_url_start_a = `${domain}/report/ubcompletion/user_progress_a.php?id=`
+  const check_view_state_url_start = `${domain}/report/ubcompletion/user_progress.php?id=`
   const course_id = +current_url.substr(course_view_url_start.length)
+  let colors = {}
+  let view = {}
+  let settings = {}
 
   function normalize_title(title) {
     return title.replace(/ /g, '')
@@ -25,13 +29,19 @@
     if (!isFinite(course_id) || isNaN(course_id))
       throw Error('course_id is NaN')
 
-    $.ajax({ url: check_view_state_url_start + course_id }).done(html => {
+    $.ajax({ url: check_view_state_url_start_a + course_id }).done(html => {
       let vdom = $.parseHTML(html)
 
-      let video_state_list = Array.from($(vdom).find('.user_progress_table')[0].children[2].children).map(e => ({
-        title: normalize_title(e.children[+(e.children.length == 6)].textContent),
-        presence: e.children[3 + (e.children.length == 6)].innerText
-      })).filter(video => video.title)
+      let video_state_list
+
+      //if ($(vdom).find('.user_progress_table').length) {
+        video_state_list = Array.from($(vdom).find('.user_progress_table')[0].children[2].children).map(e => ({
+          title: normalize_title(e.children[+(e.children.length == 6)].textContent),
+          presence: e.children[3 + (e.children.length == 6)].innerText
+        })).filter(video => video.title)
+      //}else{
+        //TODO: check_view_state_url_start에 대응시켜야하는 페이지
+      //}
 
       let video_state_map_by_title = {}
       for (let video_state of video_state_list) {
@@ -111,21 +121,139 @@
         assignment.style.fontWeight = 'bold'
 
         if (is_submitted)
-          assignment.style['color'] = 'green'
+          assignment.style.color = colors['과제-제출-완료']
         else
-          assignment.style['color'] = 'red'
+          assignment.style.color = colors['과제-제출-안-함']
 
         let feedback = $(vdom).find('.feedback')[0]
         if (feedback) {
           let score = get_child(feedback, [1, 0, 0, 0, 1])
           let node = document.createElement('span')
           node.innerText = ' ' + score.innerText
+          node.style.color = colors['과제-점수']
           assignment.element.appendChild(node)
         }
       })
     })
   }
 
-  $(highlight_videos)
-  $(highlight_assignments)
+  const storage = chrome.storage.sync
+
+  function highlight_files() {
+    Array.from($('img[alt=파일]')).map(e => ({
+      element: e.parentElement,
+      href: e.parentElement.href,
+      style: e.parentElement.style
+    })).forEach(file => {
+      if(view[file.href])
+        file.style.color = colors['클릭-함']
+      else
+        file.style.color = colors['클릭-안-함']
+
+      file.element.addEventListener('click', () => {
+        if(!view[file.href]) {
+          view[file.href] = true;
+          storage.set({ view })
+        }
+      })
+    })
+  }
+
+  function track_storage()
+  {
+    chrome.storage.onChanged.addListener(function(changes, namespace) {
+      if(changes['colors']){
+        colors = changes['colors'].newValue;
+        highlight_videos()
+        highlight_assignments()
+        highlight_files()
+      }
+      if(changes['view']){
+        view = changes['view'].newValue;
+        highlight_files()
+      }
+      if(changes['settings']){
+        settings = changes['settings'].newValue;
+        if(changes['settings'].oldValue.inlineVideo != changes['settings'].newValue.inlineVideo)
+          inject_inline_video_feature(settings.inlineVideo)
+      }
+    });
+  }
+
+  function hide_inline_videos()
+  {
+    Array.from($('.inline-video')).forEach(video => {
+      video.pause()
+      video.style.display = "none"
+    })
+  }
+
+  function handle_video(ev)
+  {
+    ev.stopPropagation()
+    ev.preventDefault()
+    
+    const target = ev.target
+    const href = target.parentNode.href
+    let parent= target.parentNode
+    while(!parent.className.includes("ubfile"))
+      parent = parent.parentNode
+    
+    const id = "v" + parent.id
+    
+    let video = $("#" + id)[0]
+    if(video){
+      if(video.style.display == "none" || video.parentNode != parent.parentNode){
+        hide_inline_videos()
+        video.style.display = "block"
+      }else
+        video.style.display = "none"
+    } else {
+      hide_inline_videos()
+      video = document.createElement("video")
+      video.id = id;
+      video.className = "inline-video"
+      video.src = href;
+      video.controls = true;
+      video.style.width = "100%"
+      video.style["max-width"] = "1080px"
+    }
+    
+    parent.parentNode.insertBefore(video, parent.nextSibling);
+  }
+
+  const video_images = [
+    "https://plato.pusan.ac.kr/theme/image.php/coursemosv2/core/1629360092/f/quicktime-24",
+    "https://plato.pusan.ac.kr/theme/image.php/coursemosv2/core/1629360092/f/mpeg-24"
+  ]
+
+  function inject_inline_video_feature(flag = true) {
+    Array.from($('img[alt=파일]'))
+      .filter(img => video_images.includes(img.src))
+      .map(v => v.parentNode)
+      .forEach(a => a.onclick = flag ? handle_video : null)
+  }
+  
+  storage.get(['colors', 'view', 'settings'], result => {
+    colors = result.colors || {
+      '출석': 'green',
+      '결석': 'red',
+      '과제-제출-완료': 'green',
+      '과제-제출-안-함': 'red',
+      '과제-점수': 'hotpink',
+      '클릭-함': 'hotpink',
+      '클릭-안-함': 'black'
+    }
+
+    view = result.view || {}
+    settings = result.settings || {}
+
+    $(highlight_videos)
+    $(highlight_assignments)
+    $(highlight_files)
+    $(track_storage)
+
+    if(settings.inlineVideo)
+      inject_inline_video_feature()
+  })
 })()
