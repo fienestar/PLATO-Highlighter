@@ -18,8 +18,15 @@
     if (!Array.isArray(index))
       return get_child(element, [index])
 
-    for (let i of index)
-      element = element.children[i]
+    for (let i of index){
+      if(i >= 0)
+        element = element?.children?.[i]
+      else
+        while(i != 0){
+          element = element?.parentElement;
+          ++i;
+        }
+    }
 
     return element
   }
@@ -105,25 +112,53 @@
     })
   }
 
+  const todo = document.createElement('ul');
+  todo.className = 'weeks ubsweeks';
+  todo.style.borderBottom = 0;
+  todo.style.padding = '0rem 2rem';
+  const todoContent = document.createElement('li')
+  todoContent.className = 'section main clearfix'
+  todoContent.style.paddingBottom = 0;
+  todoContent.innerHTML = `<div class="content"><h3 class="sectionname"><span style="color:purple">TODO</span></h3><ul class="section img-text"></ul></div>`
+  const todoTitle = todoContent.getElementsByClassName('sectionname')[0]
+  const todoList = todoContent.getElementsByClassName('section')[0]
+  todoList.style.display = 'none'
+  todoTitle.addEventListener('click', () => {
+    if(todoList.style.display === 'none')
+      todoList.style.display = 'block';
+    else
+      todoList.style.display = 'none'
+  })
+  todo.append(todoContent)
+  todo.style.display = 'none'
+  document.getElementsByClassName('course-box')[0].append(todo);
+  function addTODO(node){
+    todoList.append(node.cloneNode(true));
+    todo.style.display = 'block'
+  }
+
   // 과제 하이라이트
   function highlight_assignments() {
     Array.from($('img[alt=과제]')).map(e => ({
       element: e.parentElement,
       href: e.parentElement.href,
       style: e.parentElement.style
-    })).forEach(assignment => {
+    })).filter(assignment => assignment.href).forEach(assignment => {
       $.ajax({ url: assignment.href }).done(html => {
         let vdom = $.parseHTML(html)
 
         let status_table = $(vdom).find('.submissionstatustable')[0]
-        let is_submitted = (get_child(status_table, [1, 0, 0, 0, 1]).innerText == '제출 완료')
+        let is_submitted = status_table.innerHTML.includes('제출 완료')
 
         assignment.style.fontWeight = 'bold'
 
         if (is_submitted)
           assignment.style.color = colors['과제-제출-완료']
-        else
-          assignment.style.color = colors['과제-제출-안-함']
+        else{
+          assignment.style.color = colors['과제-제출-안-함'];
+          if(!html.includes('제출 마감이 지난 시간'))
+            addTODO(get_child(assignment.element, -5))
+        }
 
         let feedback = $(vdom).find('.feedback')[0]
         if (feedback) {
@@ -132,6 +167,35 @@
           node.innerText = ' ' + score.innerText
           node.style.color = colors['과제-점수']
           assignment.element.appendChild(node)
+        }
+      })
+    })
+
+    Array.from($('img[alt="코딩 과제"]')).map(e => ({
+      element: e.parentElement,
+      href: e.parentElement.href,
+      style: e.parentElement.style
+    })).filter(assignment => assignment.href).reverse().forEach(assignment => {
+      $.ajax({ url: assignment.href.replace('view', 'forms/submissionview') }).done(html => {
+        let vdom = $($.parseHTML(html))
+        const box = vdom.find('.box')[0]
+
+        if(!box){
+          assignment.style.color = colors['과제-제출-안-함']
+          console.log(get_child(assignment.element, -6))
+          if(vdom.find('li.nav-item-submission\\.php').length)
+            addTODO(get_child(assignment.element, -5))
+          return;
+        }
+
+        try{
+          const score = $(box).find('b')[0].nextSibling.textContent.replace(': ', '')
+          let node = document.createElement('span')
+          node.innerText = ' ' + score
+          assignment.element.appendChild(node)
+          assignment.style.color = colors['과제-제출-완료']
+        }catch(e) {
+          console.error(e)
         }
       })
     })
