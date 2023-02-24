@@ -2,12 +2,15 @@
   "update_url": "https://clients2.google.com/service/update2/crx",
   "name": "PLATO Highlighter",
   "short_name": "plato",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "manifest_version": 2,
+  "permissions": [
+    "storage"
+  ],
   "icons": {
-    "16": "icons/icon-16.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
   },
   "description": "PLATO의 강의 페이지에서 녹화 강의, 과제의 상태를 표시합니다.",
   "content_scripts": [
@@ -16,20 +19,22 @@
         "https://plato.pusan.ac.kr/course/view.php*"
       ],
       "js": [
-        "jquery.min.js",
-        "highlighter.js"
+        "assets/js/jquery.min.js",
+        "assets/js/course-highlighter.js"
       ]
     },
     {
       "matches": [
-        "https://plato.pusan.ac.kr/mod/ubfile/view.php*",
-        "https://plato.pusan.ac.kr/mod/folder/view.php*",
-        "https://plato.pusan.ac.kr/mod/ubboard/view.php*",
-        "https://plato.pusan.ac.kr/mod/ubboard/article.php*"
+        "https://plato.pusan.ac.kr/mod/vod/viewer.php*"
       ],
       "js": [
-        "view-checker.js"
+        "assets/js/jquery.min.js",
+        "assets/js/vod-highlighter.js"
       ]
     }
-  ]
+  ],
+  "options_page": "option.html",
+  "browser_action": {
+      "default_popup": "option.html"
+  }
 }
